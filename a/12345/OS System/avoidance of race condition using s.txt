@@ -1,0 +1,50 @@
+avoidance of race condition using semaphor
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+#define N 5
+
+int shared_counter = 0;
+sem_t mutex;
+
+void* increment(void* arg) {
+    for (int i = 0; i < N; ++i) {
+        sem_wait(&mutex);
+        shared_counter++;
+        printf("Thread %ld: Incremented counter to %d\n", (long)arg, shared_counter);
+        sem_post(&mutex);
+    }
+    pthread_exit(NULL);
+}
+
+void* decrement(void* arg) {
+    for (int i = 0; i < N; ++i) {
+        sem_wait(&mutex);
+        shared_counter--;
+        printf("Thread %ld: Decremented counter to %d\n", (long)arg, shared_counter);
+        sem_post(&mutex);
+    }
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t threads[N];
+    sem_init(&mutex, 0, 1);
+
+    for (long i = 0; i < N; ++i) {
+        if (i % 2 == 0) {
+            pthread_create(&threads[i], NULL, increment, (void*)i);
+        } else {
+            pthread_create(&threads[i], NULL, decrement, (void*)i);
+        }
+    }
+
+    for (int i = 0; i < N; ++i) {
+        pthread_join(threads[i], NULL);
+    }
+
+    sem_destroy(&mutex);
+
+    return 0;
+}
